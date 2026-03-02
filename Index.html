@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>PresuSimple</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background:#f2f4f8;
+  padding:20px;
+}
+
+.container {
+  max-width:600px;
+  margin:auto;
+  background:white;
+  padding:25px;
+  border-radius:16px;
+  box-shadow:0 15px 40px rgba(0,0,0,.1);
+}
+
+/* BRAND */
+.brand {
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.brand .logo {
+  font-size:42px;
+  font-weight:900;
+}
+
+.brand .tagline {
+  font-size:14px;
+  color:#666;
+}
+
+/* FORM */
+label {
+  display:block;
+  margin-top:10px;
+  font-size:14px;
+}
+
+input, select {
+  width:100%;
+  padding:10px;
+  margin-top:4px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button {
+  width:100%;
+  margin-top:12px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  font-size:15px;
+  cursor:pointer;
+}
+
+.primary { background:#007bff; color:white; }
+.secondary { background:#444; color:white; }
+.danger { background:#dc3545; color:white; }
+
+/* COLLAPSABLE */
+.collapsible {
+  background:#eef1f6;
+  padding:12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.collapsible-content {
+  display:none;
+  margin-top:10px;
+}
+
+/* ITEMS */
+.detalle {
+  margin-top:20px;
+  background:#f7f9fc;
+  padding:15px;
+  border-radius:12px;
+}
+
+.item {
+  margin-bottom:10px;
+  padding-bottom:10px;
+  border-bottom:1px dashed #ccc;
+}
+
+.item-actions button {
+  width:auto;
+  margin-right:6px;
+  padding:6px 10px;
+  font-size:12px;
+}
+
+/* TOTAL */
+.total {
+  margin-top:16px;
+  text-align:right;
+}
+
+.total span {
+  display:block;
+  font-size:34px;
+  font-weight:900;
+  color:#007bff;
+}
+
+/* PRO BOX */
+.pro-box {
+  margin-top:30px;
+  padding:20px;
+  border-radius:16px;
+  background:#f1f8ff;
+  border:2px dashed #339af0;
+}
+
+.pro-box h3 {
+  margin:0 0 10px;
+}
+
+.pro-box ul {
+  padding-left:18px;
+  font-size:14px;
+}
+
+.pro-box input {
+  margin-top:10px;
+}
+
+.pro-box button {
+  background:#28a745;
+  color:white;
+  font-weight:800;
+}
+
+.small-text {
+  font-size:13px;
+  margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="brand">
+    <div class="logo">📄 PresuSimple</div>
+    <div class="tagline">Presupuestos simples, claros y profesionales</div>
+  </div>
+
+  <!-- CLIENTE -->
+  <div class="collapsible" onclick="toggleCliente()">➕ Datos del cliente (opcional)</div>
+  <div class="collapsible-content" id="datosCliente">
+    <label>Cliente <input id="cliente"></label>
+    <label>N° Presupuesto <input id="numero"></label>
+    <label>Fecha <input type="date" id="fecha"></label>
+  </div>
+
+  <label>Moneda
+    <select id="moneda">
+      <option value="$">$ Pesos</option>
+      <option value="USD">USD</option>
+      <option value="€">€</option>
+    </select>
+  </label>
+
+  <label class="small-text">
+  Logo de tu negocio
+  <input type="file" id="logoInput" accept="image/*">
+</label>
+
+  <hr>
+
+  <label>Trabajo o producto <input id="desc"></label>                                   
+  <label>Cantidad <input type="number" id="cant" oninput="actualizarTotalProvisorio()">
+  <label>Precio unitario <input type="number" id="precio" oninput="actualizarTotalProvisorio()">
+
+  <button class="primary" onclick="agregarItem()">Presupuestar</button>
+
+  <div class="detalle" id="lista"></div>
+
+  <div class="total">
+    Total
+    <span id="total">$0</span>
+  </div>
+
+  <button class="secondary" onclick="guardarPresupuesto()">💾 Guardar presupuesto</button>
+  <button class="secondary" onclick="descargarPDF()">📄 Descargar PDF</button>
+
+  <div id="estado" class="small-text"></div>
+
+  <!-- PRO -->
+  <div class="pro-box" id="proBox">
+    <h3>🚀 Pasá a PresuSimple PRO</h3>
+    <ul>
+      <li>✔ PDF sin marca de agua</li>
+      <li>✔ Logo profesional en el PDF</li>
+      <li>✔ Imagen más seria para tus clientes</li>
+    </ul>
+
+    <label>Clave PRO
+      <input id="clavePro" placeholder="Ingresá tu clave PRO">
+    </label>
+
+    <button onclick="activarPRO()">Desbloquear PRO</button>
+
+    <div class="small-text">Precio lanzamiento: <strong>$1000 / mes</strong></div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+/* ================== ESTADO GLOBAL ================== */
+let items = JSON.parse(localStorage.getItem("presupuesto")) || [];
+let total = 0;
+let logoData = null;
+let logoWidth = 0;
+let logoHeight = 0;
+let esPro = true;
+
+/* ================== LOGO ================== */
+document.getElementById("logoInput").addEventListener("change", e => {
+  if (!esPro) {
+    mostrarEstado("🔒 El logo es solo para PRO");
+    e.target.value = "";
+    return;
+  }
+
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    logoData = ev.target.result;
+
+    const img = new Image();
+    img.onload = () => {
+      logoWidth = img.width;
+      logoHeight = img.height;
+    };
+    img.src = logoData;
+
+    mostrarEstado("✔ Logo cargado");
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ================== UI ================== */
+function toggleCliente() {
+  const c = document.getElementById("datosCliente");
+  c.style.display = c.style.display === "block" ? "none" : "block";
+}
+
+/* ================== RENDER ================== */
+function render() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  total = 0;
+  const m = moneda.value;
+
+  items.forEach((i, index) => {
+    total += i.subtotal;
+    lista.innerHTML += `
+      <div class="item">
+        <strong>${i.desc}</strong><br>
+        ${i.cant} x ${m}${i.precio} = <strong>${m}${i.subtotal}</strong>
+        <div class="item-actions">
+          <button onclick="editar(${index})">✏️</button>
+          <button class="danger" onclick="borrar(${index})">🗑</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("total").textContent = m + total;
+}
+
+/* ================== PREVIEW TOTAL ================== */
+function actualizarTotalProvisorio() {
+  const c = Number(cant.value);
+  const p = Number(precio.value);
+  const m = moneda.value;
+
+  if (c > 0 && p > 0) {
+    document.getElementById("total").textContent = m + (total + c * p);
+  } else {
+    document.getElementById("total").textContent = m + total;
+  }
+}
+
+/* ================== CRUD ================== */
+function agregarItem() {
+ 
+  const d = desc.value.trim();
+  const c = Number(cant.value);
+  const p = Number(precio.value);
+
+  if (!d || c <= 0 || p <= 0) {
+    mostrarEstado("⚠ Completá correctamente los datos");
+    return;
+  }
+
+  items.push({ desc: d, cant: c, precio: p, subtotal: c * p });
+
+  desc.value = "";
+  cant.value = "";
+  precio.value = "";
+
+  render();
+}
+
+function borrar(i) {
+  items.splice(i, 1);
+  render();
+}
+
+function editar(i) {
+  const it = items[i];
+  desc.value = it.desc;
+  cant.value = it.cant;
+  precio.value = it.precio;
+  items.splice(i, 1);
+  render();
+}
+
+/* ================== GUARDAR ================== */
+function guardarPresupuesto() {
+  if (!esPro) {
+    mostrarEstado("🔒 Guardar es función PRO");
+    return;
+  }
+  localStorage.setItem("presupuesto", JSON.stringify(items));
+  mostrarEstado("✔ Presupuesto guardado");
+}
+
+/* ================== PRO ================== */
+function activarPRO() {
+  const clave = clavePro.value;
+  if (clave === "PRO1000") {
+    esPro = true;
+    localStorage.setItem("esPro", "true");
+    document.getElementById("proBox").style.display = "none";
+    mostrarEstado("🚀 PRO activado");
+  } else {
+    mostrarEstado("❌ Clave incorrecta");
+  }
+}
+
+/* ================== PDF ================== */
+function descargarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+
+  if (esPro && logoData) {
+    const maxWidth = 40;
+    const ratio = logoHeight / logoWidth;
+    const h = maxWidth * ratio;
+    doc.addImage(logoData, "PNG", 20, 10, maxWidth, h);
+    y = 10 + h + 10;
+  }
+
+doc.setFontSize(26);
+doc.setTextColor(196, 98, 45); // cobrizo profesional
+doc.text("PRESUPUESTO", 70, y, { align: "center" });
+y += 10;
+
+doc.setTextColor(0);
+
+doc.setDrawColor(200);
+doc.line(20, y, 190, y);
+y += 10;
+
+doc.setFontSize(11);
+
+doc.setFontSize(11);
+
+doc.autoTable({
+  startY: y,
+  head: [["Descripción", "Detalle", "Total"]],
+  body: items.map(i => [
+    i.desc,
+    `${i.cant} x ${moneda.value}${i.precio}`,
+    `${moneda.value}${i.subtotal}`
+  ]),
+  styles: {
+    fontSize: 11,
+    cellPadding: 4,
+  },
+  headStyles: {
+    fillColor: [245, 235, 225],
+    textColor: 80,
+    fontStyle: "bold"
+  },
+  columnStyles: {
+    0: { cellWidth: 90 },
+    1: { cellWidth: 40, halign: "right" },
+    2: { cellWidth: 40, halign: "right" }
+  }
+});
+
+// actualizar Y para que el TOTAL no se pise
+y = doc.lastAutoTable.finalY + 10;;
+
+  y += 8;
+  
+  y += 6;
+
+  // Línea superior gruesa
+doc.setDrawColor(0);
+doc.setLineWidth(1);
+doc.line(120, y, 190, y);
+y += 10;
+
+// Caja fondo suave
+doc.setFillColor(245, 235, 225);
+doc.rect(120, y - 10, 70, 16, "F");
+
+// Texto total
+doc.setFontSize(16);
+doc.setTextColor(196, 98, 45);
+doc.text(
+  `TOTAL: ${moneda.value}${total}`,
+  185,
+  y,
+  { align: "right" }
+);
+
+doc.setTextColor(0);
+doc.setLineWidth(0.2);
+
+// Footer discreto
+const pageHeight = doc.internal.pageSize.height;
+
+doc.setFontSize(8);
+doc.setTextColor(150);
+doc.text(
+  "Hecho con PresuSimple",
+  105,
+  pageHeight - 10,
+  { align: "center" }
+);
+
+if (!esPro) {
+  y += 12; // pequeño espacio debajo del total
+
+  doc.setFontSize(9);
+  doc.setTextColor(150);
+
+  doc.text(
+    "Presupuesto generado con PresuSimple.com",
+    105,
+    y,
+    { align: "center" }
+  );
+
+  y += 5;
+
+  doc.text(
+    "(Presupuestos simples y profesionales)",
+    105,
+    y,
+    { align: "center" }
+  );
+}
+
+  doc.save("presupuesto.pdf");
+}
+
+/* ================== ESTADO ================== */
+function mostrarEstado(msg) {
+  estado.textContent = msg;
+  setTimeout(() => estado.textContent = "", 3000);
+}
+
+if (esPro) document.getElementById("proBox").style.display = "none";
+render();
+</script>
+
